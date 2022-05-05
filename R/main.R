@@ -85,7 +85,7 @@ dymo <- function(df, seq_len, n_windows = 10, ci = 0.8, smoother = FALSE, min_fe
   testing_errors <- rank_models$testing_errors
   plots <- rank_models$plots
   best_combination <- paste0("combination ", best_combination, ", rank ", best_rank)
-  best_model <- list(best_combination = best_combination, testing_errors = testing_errors, plots = plots)
+  best_model <- list(best_combination = best_combination, quant_preds = quant_preds, testing_errors = testing_errors, plots = plots)
 
   toc(log = TRUE)
   time_log<-seconds_to_period(round(parse_number(unlist(tic.log())), 0))

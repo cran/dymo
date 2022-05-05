@@ -46,10 +46,10 @@ dymo(
 \value{
 This function returns a list including:
 \itemize{
-\item comb_metrics: error metrics for all possible combination of time features (for each combination, pred_score, me, mae, mse, rmsse, mpe, mape, rmae, rrmse, rame, mase, smse, sce, gmrae, are averaged across features, ranks and validation windows)
+\item comb_metrics: error metrics for all possible combinations of time features (for each combination, pred_score, me, mae, mse, rmsse, mpe, mape, rmae, rrmse, rame, mase, smse, sce, gmrae, are averaged across features, ranks and validation windows)
 \item best_model: best combination resulting from the average prediction score across different ranks and features, including:
 \itemize{
-\item best_combination: combination of index and rank for the best model
+\item best_combination: combination of indexes and rank for the best model
 \item testing_errors: testing errors for each time feature averaged across validation windows
 \item quant_preds: min, max, q25, q50, q75, quantiles at selected ci, mean, sd, mode, skewness, kurtosis, IQR to range, median range ratio, upside probability and divergence for each point fo predicted sequences
 \item plots: standard plot with confidence interval for each time feature

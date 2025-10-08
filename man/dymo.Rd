@@ -2,13 +2,13 @@
 % Please edit documentation in R/dymo.R, R/main.R
 \docType{package}
 \name{dymo}
-\alias{dymo}
 \alias{dymo-package}
+\alias{dymo}
 \title{dymo}
 \usage{
 dymo(
   df,
-  seq_len,
+  horizon,
   n_windows = 10,
   ci = 0.8,
   smoother = FALSE,
@@ -17,51 +17,76 @@ dymo(
   dates = NULL,
   error_scale = "naive",
   error_benchmark = "naive",
-  seed = 42
+  seed = 42,
+  n_samp = 1000,
+  eig_max_mod = 0.995
 )
 }
 \arguments{
-\item{df}{A data frame with time features on columns. You need at least two time features. In case of missing values, automatic missing imputation through kalman filter will be performed.}
+\item{df}{A data frame or matrix of numeric time features, where each column represents a different time series of equal length. Must contain at least two features.}
 
-\item{seq_len}{Positive integer. Time-step number of the forecasting sequence. Default: NULL (automatic selection between 1 and the square root of full length).}
+\item{horizon}{Positive integer. Number of forecast steps ahead (horizon) to predict.}
 
-\item{n_windows}{Positive integer. Number of validation windows to test prediction error. Default: 10.}
+\item{n_windows}{Positive integer. Number of validation windows used for residual and error estimation. Default: 10.}
 
-\item{ci}{Confidence interval for prediction. Default: 0.8}
+\item{ci}{Numeric in (0, 1). Confidence level for the conformal predictive intervals. Default: 0.8.}
 
-\item{smoother}{Logical. Flag to TRUE for loess smoothing. Default: FALSE.}
+\item{smoother}{Logical. Whether to apply automatic LOESS smoothing to the input time series before modeling. Default: FALSE.}
 
-\item{min_feats}{Positive integer. Minimum number of time features to combine. Default: NULL (set equal to the total number of features)}
+\item{min_feats, max_feats}{Positive integers. Minimum and maximum number of features to combine in the multifeature DMD. By default both are set to the total number of columns in df.}
 
-\item{max_feats}{Positive integer. Maximum number of time features to combine. Default: NULL (set equal to the total number of features)}
+\item{dates}{Optional vector of `Date` objects (same length as the rows of df). If supplied, forecast plots will use date labels and forecast dates will be extrapolated automatically.}
 
-\item{dates}{Date. Vector with dates for time features.}
+\item{error_scale}{Character string specifying the scaling used in normalized error metrics. Options: "naive" (average one-step absolute error of the historical series) or "deviation" (standard deviation of the series). Default: `"naive"`.}
 
-\item{error_scale}{String. Scale for the scaled error metrics. Two options: "naive" (average of naive one-step absolute error for the historical series) or "deviation" (standard error of the historical series). Default: "naive".}
+\item{error_benchmark}{Character string specifying the benchmark used for relative error metrics. Options: "naive" (last value persistence) or "average" (mean value). Default: "naive".}
 
-\item{error_benchmark}{String. Benchmark for the relative error metrics. Two options: "naive" (sequential extension of last value) or "average" (mean value of true sequence). Default: "naive".}
+\item{seed}{Positive integer. Random seed for reproducibility. Default: 42.}
 
-\item{seed}{Positive integer. Random seed. Default: 42.}
+\item{n_samp}{Positive integer. Number of conformal samples to draw for each feature and horizon. Default: 1000.}
+
+\item{eig_max_mod}{Numeric in (0,1]. Maximum allowed eigenvalue modulus for DMD eigenmodes (values greater than this are clipped to prevent divergence). Default: 0.995.}
 }
 \value{
-This function returns a list including:
-\itemize{
-\item comb_metrics: error metrics for all possible combinations of time features (for each combination, pred_score, me, mae, mse, rmsse, mpe, mape, rmae, rrmse, rame, mase, smse, sce, gmrae, are averaged across features, ranks and validation windows)
-\item best_model: best combination resulting from the average prediction score across different ranks and features, including:
-\itemize{
-\item best_combination: combination of indexes and rank for the best model
-\item testing_errors: testing errors for each time feature averaged across validation windows
-\item quant_preds: min, max, q25, q50, q75, quantiles at selected ci, mean, sd, mode, skewness, kurtosis, IQR to range, median range ratio, upside probability and divergence for each point fo predicted sequences
-\item plots: standard plot with confidence interval for each time feature
-}
-\item time_log
+A list with three top-level components:
+
+\describe{
+  \item{`comb_metrics`}{A data frame containing averaged forecast metrics and
+    scores for all tested feature combinations and DMD ranks. Columns include
+    rank, prediction scores, and standard error metrics such as MAE, MAPE,
+    RMSSE, MASE, etc.}
+
+  \item{`best_model`}{A list summarizing the best-performing feature
+    combination and DMD rank, containing:
+      \describe{
+        \item{`best_combination`}{Character string describing which features
+          and rank were selected.}
+        \item{`quant_preds`}{List of matrices (one per feature) summarizing
+          forecast quantiles, mean, and standard deviation for each horizon.}
+        \item{`point_forecast`}{Matrix of point (mean) forecasts on the
+          original level scale. Rows = features, columns = forecast steps.}
+        \item{`samples`}{List of matrices (one per feature) containing
+          conformal resampled level trajectories (n_samp x horizon).}
+        \item{`empfuns`}{List of empirical distribution functions per feature
+          and horizon. Each element contains:
+          \code{rfun(n)}, \code{pfun(x)}, \code{qfun(p)}, \code{dfun(x)}.}
+        \item{`testing_errors`}{Vector of average forecast error metrics for
+          the best rank and feature combination.}
+        \item{`plots`}{List of ggplot objects visualizing the historical data,
+          forecast mean, and predictive intervals for each feature.}
+      }}
+
+  \item{`time_log`}{Character string giving the elapsed computation time in
+    "hh:mm:ss" format.}
 }
 }
 \description{
 Dynamic Mode Decomposition for Multivariate Time Feature Prediction
+
+DYMO is an R package for multi-feature time-series forecasting using Dynamic Mode Decomposition (DMD) on scaled returns. It reconstructs future levels by compounding predicted dynamics and applies conformal predictive sampling to generate calibrated uncertainty distributions. The result is a fast, interpretable, and distribution-free forecasting framework with fully empirical predictive intervals and ggplot visualizations.
 }
 \examples{
-dymo(time_features[,c(2, 3, 4)], seq_len = 10, dates = time_features$dates)
+dymo(time_features[,c(2, 3, 4)], horizon = 10, dates = time_features$dates)
 
 }
 \seealso{
@@ -74,6 +99,4 @@ Useful links:
 \author{
 \strong{Maintainer}: Giancarlo Vercellino \email{giancarlo.vercellino@gmail.com} [copyright holder]
 
-
-Giancarlo Vercellino \email{giancarlo.vercellino@gmail.com}
 }
